@@ -1,4 +1,4 @@
-name: Auto Change Issue Status
+name: Rename Pull Request
 
 on:
   pull_request:
