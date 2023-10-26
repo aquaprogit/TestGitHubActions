@@ -1,4 +1,4 @@
-name: Auto Change Issue Status
+name: Rename Pull Request
 
 on:
   pull_request:
@@ -6,21 +6,23 @@ on:
       - opened
 
 jobs:
-  change-issue-status:
+  rename-pull-request:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Check PR Title for Issue Reference
       id: issue
       run: |
-        title="${{ github.event.pull_request.title }}"
-        issue_number=$(echo "$title" | grep -o '#[0-9]\+' | sed 's/#//')
+        issue_title=$(echo "${{ github.event.pull_request.title }}" | sed -n 's/.*#\([0-9]\+\).*/\1/p')
+        issue_number=$(echo "${{ github.event.pull_request.title }}" | sed -n 's/.*#\([0-9]\+\).*/\1/p')
+        echo "::set-output name=issue_title::${issue_title}"
         echo "::set-output name=issue_number::${issue_number}"
-    
-    - name: Change Issue Status to "In Progress"
-      if: steps.issue.outputs.issue_number
+
+    - name: Rename Pull Request Title
+      if: steps.issue.outputs.issue_title
       run: |
-        token="${{ secrets.GITHUB_TOKEN }}"
+        issue_title=${{ steps.issue.outputs.issue_title }}
         issue_number=${{ steps.issue.outputs.issue_number }}
-        status="In Progress"
-        curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${token}" "https://api.github.com/repos/${{ github.repository }}/issues/${issue_number}" -d "{\"state\":\"${status}\"}"
+        new_title="${issue_title} #${issue_number}"
+        token="${{ secrets.GITHUB_TOKEN }}"
+        curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${token}" "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" -d "{\"title\":\"${new_title}\"}"
