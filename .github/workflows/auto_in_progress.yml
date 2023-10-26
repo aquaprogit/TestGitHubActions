@@ -1,0 +1,26 @@
+name: Auto Change Issue Status
+
+on:
+  pull_request:
+    types:
+      - opened
+
+jobs:
+  change-issue-status:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check PR Title for Issue Reference
+      id: issue
+      run: |
+        title="${{ github.event.pull_request.title }}"
+        issue_number=$(echo "$title" | grep -o '#[0-9]\+' | sed 's/#//')
+        echo "::set-output name=issue_number::${issue_number}"
+    
+    - name: Change Issue Status to "In Progress"
+      if: steps.issue.outputs.issue_number
+      run: |
+        token="${{ secrets.GITHUB_TOKEN }}"
+        issue_number=${{ steps.issue.outputs.issue_number }}
+        status="In Progress"
+        curl -X PATCH -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${token}" "https://api.github.com/repos/${{ github.repository }}/issues/${issue_number}" -d "{\"state\":\"${status}\"}"
